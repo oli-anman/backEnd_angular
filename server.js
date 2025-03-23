@@ -7,6 +7,7 @@ let dotenv = require('dotenv');
 dotenv.config();
 
 let assignment = require('./routes/assignments');
+let User = require('./routes/users');
 
 // const app = express();
 app.use(express.json());
@@ -71,74 +72,76 @@ app.route(prefix + '/assignments')
   .post(assignment.postAssignment)
   .put(assignment.updateAssignment);
 
+app.route(prefix + '/register')
+  // .post(User.loginUser);  
 
-const User = mongoose.model("User", UserSchema);
+// const User = mongoose.model("User", UserSchema);
 
-// Middleware pour protéger les routes
-const verifyToken = (req, res, next) => {
-  let token = req.header("Authorization");
-  if (!token) return res.status(401).json({ message: "Accès refusé" });
+// // Middleware pour protéger les routes
+// const verifyToken = (req, res, next) => {
+//   let token = req.header("Authorization");
+//   if (!token) return res.status(401).json({ message: "Accès refusé" });
 
-  try {
-    const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified; 
-    next();
-  } catch (err) {
-    res.status(400).json({ message: "Token invalide" });
-  }
-
-
-app.post(prefix + '/register', async (req, res) => {
-  const { username, email, password } = req.body;
-
-  // Vérifier si l'email existe déjà
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({ message: 'Email déjà utilisé' });
-  }
-
-  // Hacher le mot de passe
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  // Créer un nouvel utilisateur
-  const newUser = new User({
-    username,
-    email,
-    password: hashedPassword,
-  });
-
-  await newUser.save();
-
-  res.json({ message: 'Utilisateur créé avec succès' });
-});
+//   try {
+//     const verified = jwt.verify(token, process.env.JWT_SECRET);
+//     req.user = verified; 
+//     next();
+//   } catch (err) {
+//     res.status(400).json({ message: "Token invalide" });
+//   }
 
 
-// Endpoint : Connexion
-app.post(prefix + '/login', async (req, res) => {
-  const { email, password } = req.body;
+// app.post(prefix + '/register', async (req, res) => {
+//   const { username, email, password } = req.body;
 
-  // Vérifier si l'utilisateur existe
-  const user = await User.findOne({ email });
-  console.log('user', user);
-  if (!user) return res.status(400).json({ message: "Utilisateur non trouvé " }); 
+//   // Vérifier si l'email existe déjà
+//   const existingUser = await User.findOne({ email });
+//   if (existingUser) {
+//     return res.status(400).json({ message: 'Email déjà utilisé' });
+//   }
 
-  // Vérifier le mot de passe
-  const validPassword = await bcrypt.compare(password, user.password);
-  if (!validPassword) return res.status(400).json({ message: "Mot de passe incorrect" });
+//   // Hacher le mot de passe
+//   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // Générer un token JWT
-  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+//   // Créer un nouvel utilisateur
+//   const newUser = new User({
+//     username,
+//     email,
+//     password: hashedPassword,
+//   });
 
-  res.json({ token });
-});
+//   await newUser.save();
 
-// Endpoint : Profil utilisateur (Protégé)
-app.get("/api/profile", verifyToken, async (req, res) => {
-  const user = await User.findById(req.user.id).select("-password");
-  res.json(user);
-});
+//   res.json({ message: 'Utilisateur créé avec succès' });
+// });
 
-}
+
+// // Endpoint : Connexion
+// app.post(prefix + '/login', async (req, res) => {
+//   const { email, password } = req.body;
+
+//   // Vérifier si l'utilisateur existe
+//   const user = await User.findOne({ email });
+//   console.log('user', user);
+//   if (!user) return res.status(400).json({ message: "Utilisateur non trouvé " }); 
+
+//   // Vérifier le mot de passe
+//   const validPassword = await bcrypt.compare(password, user.password);
+//   if (!validPassword) return res.status(400).json({ message: "Mot de passe incorrect" });
+
+//   // Générer un token JWT
+//   const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+//   res.json({ token });
+// });
+
+// // Endpoint : Profil utilisateur (Protégé)
+// app.get("/api/profile", verifyToken, async (req, res) => {
+//   const user = await User.findById(req.user.id).select("-password");
+//   res.json(user);
+// });
+
+// }
 // On démarre le serveur
 app.listen(port, "0.0.0.0");
 console.log('Serveur démarré sur http://localhost:' + port);
