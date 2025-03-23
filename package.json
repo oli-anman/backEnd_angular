@@ -12,6 +12,7 @@
   "dependencies": {
     "assignments-api": "file:",
     "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
     "express": "^4.17.1",
     "jsonwebtoken": "^9.0.2",
     "mongodb": "^3.6.3",

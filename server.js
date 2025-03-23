@@ -1,8 +1,16 @@
 let express = require('express');
 let app = express();
 let bodyParser = require('body-parser');
+let jwt = require('jsonwebtoken');
+let bcrypt = require('bcryptjs');
+let dotenv = require('dotenv');
+dotenv.config();
 
 let assignment = require('./routes/assignments');
+
+// const app = express();
+app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 let mongoose = require('mongoose');
 mongoose.Promise = global.Promise;
@@ -43,6 +51,13 @@ let port = process.env.PORT || 8010;
 
 // les routes
 const prefix = '/api';
+// Modèle User
+const UserSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  password: String,
+  createdAt: { type: Date, default: Date.now },
+});
 
 app.route(prefix + '/assignments')
   .get(assignment.getAssignmentsAvecPagination);
@@ -56,29 +71,47 @@ app.route(prefix + '/assignments')
   .post(assignment.postAssignment)
   .put(assignment.updateAssignment);
 
-// Modèle User
-const UserSchema = new mongoose.Schema({
-  username: String,
-  email: String,
-  password: String,
-  createdAt: { type: Date, default: Date.now },
-});
 
 const User = mongoose.model("User", UserSchema);
 
 // Middleware pour protéger les routes
 const verifyToken = (req, res, next) => {
-  const token = req.header("Authorization");
+  let token = req.header("Authorization");
   if (!token) return res.status(401).json({ message: "Accès refusé" });
 
   try {
     const verified = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = verified;
+    req.user = verified; 
     next();
   } catch (err) {
     res.status(400).json({ message: "Token invalide" });
   }
-};
+
+
+app.post(prefix + '/register', async (req, res) => {
+  const { username, email, password } = req.body;
+
+  // Vérifier si l'email existe déjà
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    return res.status(400).json({ message: 'Email déjà utilisé' });
+  }
+
+  // Hacher le mot de passe
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Créer un nouvel utilisateur
+  const newUser = new User({
+    username,
+    email,
+    password: hashedPassword,
+  });
+
+  await newUser.save();
+
+  res.json({ message: 'Utilisateur créé avec succès' });
+});
+
 
 // Endpoint : Connexion
 app.post(prefix + '/login', async (req, res) => {
@@ -87,7 +120,7 @@ app.post(prefix + '/login', async (req, res) => {
   // Vérifier si l'utilisateur existe
   const user = await User.findOne({ email });
   console.log('user', user);
-  if (!user) return res.status(400).json({ message: "Utilisateur non trouvé " (user) }); 
+  if (!user) return res.status(400).json({ message: "Utilisateur non trouvé " }); 
 
   // Vérifier le mot de passe
   const validPassword = await bcrypt.compare(password, user.password);
@@ -105,10 +138,10 @@ app.get("/api/profile", verifyToken, async (req, res) => {
   res.json(user);
 });
 
+}
 // On démarre le serveur
 app.listen(port, "0.0.0.0");
 console.log('Serveur démarré sur http://localhost:' + port);
 
 module.exports = app;
-
 
