@@ -56,6 +56,55 @@ app.route(prefix + '/assignments')
   .post(assignment.postAssignment)
   .put(assignment.updateAssignment);
 
+// Modèle User
+const UserSchema = new mongoose.Schema({
+  username: String,
+  email: String,
+  password: String,
+  createdAt: { type: Date, default: Date.now },
+});
+
+const User = mongoose.model("User", UserSchema);
+
+// Middleware pour protéger les routes
+const verifyToken = (req, res, next) => {
+  const token = req.header("Authorization");
+  if (!token) return res.status(401).json({ message: "Accès refusé" });
+
+  try {
+    const verified = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = verified;
+    next();
+  } catch (err) {
+    res.status(400).json({ message: "Token invalide" });
+  }
+};
+
+// Endpoint : Connexion
+app.post(prefix + '/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  // Vérifier si l'utilisateur existe
+  const user = await User.findOne({ email });
+  console.log('user', user);
+  if (!user) return res.status(400).json({ message: "Utilisateur non trouvé " (user) }); 
+
+  // Vérifier le mot de passe
+  const validPassword = await bcrypt.compare(password, user.password);
+  if (!validPassword) return res.status(400).json({ message: "Mot de passe incorrect" });
+
+  // Générer un token JWT
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "1h" });
+
+  res.json({ token });
+});
+
+// Endpoint : Profil utilisateur (Protégé)
+app.get("/api/profile", verifyToken, async (req, res) => {
+  const user = await User.findById(req.user.id).select("-password");
+  res.json(user);
+});
+
 // On démarre le serveur
 app.listen(port, "0.0.0.0");
 console.log('Serveur démarré sur http://localhost:' + port);
